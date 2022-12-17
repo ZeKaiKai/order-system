@@ -3,6 +3,7 @@ package com.example.reggie.controller;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.reggie.common.R;
+import com.example.reggie.dto.DishDto;
 import com.example.reggie.dto.SetmealDto;
 import com.example.reggie.entity.Category;
 import com.example.reggie.entity.Setmeal;
@@ -37,13 +38,25 @@ public class SetMealController {
      * @return
      */
     @GetMapping("/{id}")
-    public R<Setmeal> getSetmealById(@PathVariable String id){
+    public R<SetmealDto> getSetmealById(@PathVariable String id){
         LambdaQueryWrapper<Setmeal> queryWrapper = new LambdaQueryWrapper<>();
+
         queryWrapper.eq(Setmeal::getCategoryId, id);
 
         Setmeal setmeal = setmealService.getById(id);
 
-        return R.success(setmeal);
+        // 获取套餐的分类名称
+        LambdaQueryWrapper<Category> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(Category::getId, setmeal.getCategoryId());
+        Category category = categoryService.getOne(wrapper);
+        String categoryName = category.getName();
+
+        // 合并成DishDto
+        SetmealDto setmealDto = new SetmealDto();
+        BeanUtils.copyProperties(setmeal, setmealDto);
+        setmealDto.setCategoryName(categoryName);
+
+        return R.success(setmealDto);
     }
 
     /**

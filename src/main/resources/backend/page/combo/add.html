@@ -455,6 +455,7 @@
           if (this.id) {
             this.init()
           }
+
         },
         mounted() {},
         methods: {
@@ -464,6 +465,8 @@
                 this.ruleForm = res.data
                 this.ruleForm.status = res.data.status === '1'
                 this.ruleForm.price = res.data.price / 100
+                alert(res.data.price)
+                alert(this.ruleForm.price)
                 this.imageUrl = `/common/download?name=${res.data.image}`
                 this.checkList = res.data.setmealDishes
                 this.dishTable = res.data.setmealDishes
