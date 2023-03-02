@@ -4,8 +4,8 @@
         <meta charset="UTF-8">
         <meta http-equiv="X-UA-Compatible" content="IE=edge">
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0,user-scalable=no,minimal-ui">
-        <title>菩提阁</title>
-        <link rel="icon" href="./../images/favico.ico">
+        <title>番茄餐厅</title>
+        <link rel="icon" href="../images/favicon.ico">
         <!--不同屏幕尺寸根字体设置-->
         <script src="./../js/base.js"></script>
         <!--element-ui的样式-->
@@ -127,9 +127,12 @@
                             return  
                         }
                         let res= {}
+
                         if(this.id){
+                            //id存在则更新地址
                             res = await updateAddressApi(this.form)
                         }else{
+                            //id不存在则新建地址
                             res = await addAddressApi(this.form)
                         }
                         

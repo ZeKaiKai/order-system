@@ -1,18 +1,21 @@
 package com.example.reggie.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.reggie.common.R;
-import com.example.reggie.dto.DishDto;
 import com.example.reggie.dto.SetmealDto;
 import com.example.reggie.entity.Category;
 import com.example.reggie.entity.Setmeal;
+import com.example.reggie.entity.SetmealDish;
 import com.example.reggie.service.CategoryService;
 import com.example.reggie.service.SetMealDishService;
 import com.example.reggie.service.SetmealService;
+import com.example.reggie.service.serviceImpl.SetMealDishServiceImpl;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -39,10 +42,11 @@ public class SetMealController {
      */
     @GetMapping("/{id}")
     public R<SetmealDto> getSetmealById(@PathVariable String id){
+        SetmealDto setmealDto = new SetmealDto();
+
+        // 查询套餐基本数据（单表）
         LambdaQueryWrapper<Setmeal> queryWrapper = new LambdaQueryWrapper<>();
-
         queryWrapper.eq(Setmeal::getCategoryId, id);
-
         Setmeal setmeal = setmealService.getById(id);
 
         // 获取套餐的分类名称
@@ -51,10 +55,15 @@ public class SetMealController {
         Category category = categoryService.getOne(wrapper);
         String categoryName = category.getName();
 
+        // 获取套餐的对应菜品数据
+        LambdaQueryWrapper<SetmealDish> dishesWrapper = new LambdaQueryWrapper<>();
+        dishesWrapper.eq(SetmealDish::getSetmealId, setmeal.getId());
+        List<SetmealDish> dishes = setMealDishService.list(dishesWrapper);
+
         // 合并成DishDto
-        SetmealDto setmealDto = new SetmealDto();
         BeanUtils.copyProperties(setmeal, setmealDto);
         setmealDto.setCategoryName(categoryName);
+        setmealDto.setSetmealDishes(dishes);
 
         return R.success(setmealDto);
     }
@@ -168,5 +177,47 @@ public class SetMealController {
         List<Setmeal> list = setmealService.list(queryWrapper);
 
         return R.success(list);
+    }
+
+    /**
+     * 更新套餐信息
+     * （更新了套餐表和套餐菜品表）
+     * 有多个更新操作，开启事务管理
+     * @param setmealDto
+     * @return
+     */
+    @PutMapping
+    @Transactional
+    public R<String> update(@RequestBody SetmealDto setmealDto) {
+        // 更新未完成
+        // 更新setMeal表
+        Setmeal setmeal = new Setmeal();
+        BeanUtils.copyProperties(setmealDto, setmeal);
+        setmealService.updateById(setmeal);
+        // 更新setMealDish表
+        Long setmealId = setmeal.getId();
+        List<SetmealDish> setmealDishes = setmealDto.getSetmealDishes();
+        for (SetmealDish setmealDish : setmealDishes) {
+            setmealDish.setSetmealId(setmealId);
+            Long dishId = setmealDish.getDishId();
+            // 根据菜品id和套餐id查找
+            LambdaQueryWrapper<SetmealDish> setmealDishQueryWrapper = new LambdaQueryWrapper<>();
+            setmealDishQueryWrapper.eq(SetmealDish::getDishId, dishId);
+            setmealDishQueryWrapper.eq(SetmealDish::getSetmealId, setmealId);
+            SetmealDish dish = setMealDishService.getOne(setmealDishQueryWrapper);
+
+            if (dish != null) {
+                // 在setMealDish中可以查询到对应套餐有该菜品的话，更新即可
+                setmealDish.setId(dish.getId());
+                setMealDishService.updateById(setmealDish);
+            } else {
+                // 否则进行添加操作
+                setMealDishService.save(setmealDish);
+            }
+        }
+
+        setMealDishService.updateBatchById(setmealDishes);
+
+        return R.success("更新成功");
     }
 }
