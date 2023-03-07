@@ -15,6 +15,8 @@ import com.example.reggie.service.serviceImpl.SetMealDishServiceImpl;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
@@ -117,6 +119,7 @@ public class SetMealController {
      * @return
      */
     @PostMapping
+    @CacheEvict(value = "setMealCache", allEntries = true)
     public R<String> add(@RequestBody SetmealDto setmealDto){
         setmealService.saveWithDish(setmealDto);
 
@@ -129,6 +132,7 @@ public class SetMealController {
      * @return
      */
     @DeleteMapping
+    @CacheEvict(value = "setMealCache", allEntries = true)  //一但进行删除操作，清除所有缓存
     public R<String> delete(@RequestParam List<Long> ids){
         setmealService.deleteByIds(ids);
 
@@ -166,7 +170,9 @@ public class SetMealController {
      * @param setmeal
      * @return
      */
+
     @GetMapping("/list")
+    @Cacheable(value = "setMealCache", key = "#setmeal.categoryId + ' ' + #setmeal.status")
     public R<List<Setmeal>> list(Setmeal setmeal){
 
         LambdaQueryWrapper<Setmeal> queryWrapper = new LambdaQueryWrapper<>();
@@ -188,6 +194,7 @@ public class SetMealController {
      */
     @PutMapping
     @Transactional
+    @CacheEvict(value = "setMealCache", allEntries = true)
     public R<String> update(@RequestBody SetmealDto setmealDto) {
         // 更新未完成
         // 更新setMeal表
